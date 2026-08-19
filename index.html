@@ -1,0 +1,1042 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>PCRWR — National Water Quality Portal</title>
+<meta name="description" content="Pakistan Council of Research in Water Resources — National Water Quality Portal" />
+
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
+
+<style>
+  :root {
+    --bg: #EEF3F8;
+    --bg-soft: #F7FAFC;
+    --surface: #FFFFFF;
+    --surface-2: #F1F5F9;
+    --border: #E2E8F0;
+    --text: #0F172A;
+    --text-soft: #475569;
+    --muted: #94A3B8;
+    --primary: #0EA5E9;
+    --primary-600: #0284C7;
+    --primary-700: #0369A1;
+    --accent: #06B6D4;
+    --safe: #10B981;
+    --safe-soft: #D1FAE5;
+    --warn: #F59E0B;
+    --warn-soft: #FEF3C7;
+    --unsafe: #EF4444;
+    --unsafe-soft: #FEE2E2;
+    --shadow: 0 1px 2px rgba(15,23,42,.04), 0 8px 24px rgba(15,23,42,.06);
+    --shadow-lg: 0 4px 12px rgba(15,23,42,.06), 0 24px 48px rgba(15,23,42,.10);
+    --ring: 0 0 0 4px rgba(14,165,233,.15);
+    --radius: 16px;
+    --nav-h: 68px;
+  }
+  [data-theme="dark"] {
+    --bg: #0B1220;
+    --bg-soft: #0F172A;
+    --surface: #131C2E;
+    --surface-2: #1B2638;
+    --border: #243044;
+    --text: #E2E8F0;
+    --text-soft: #B6C2D2;
+    --muted: #64748B;
+    --primary: #38BDF8;
+    --primary-600: #0EA5E9;
+    --primary-700: #0284C7;
+    --accent: #22D3EE;
+    --safe: #34D399;
+    --safe-soft: #052E1A;
+    --warn: #FBBF24;
+    --warn-soft: #3A2A06;
+    --unsafe: #F87171;
+    --unsafe-soft: #3A0A0A;
+    --shadow: 0 1px 2px rgba(0,0,0,.3), 0 8px 24px rgba(0,0,0,.35);
+    --shadow-lg: 0 4px 12px rgba(0,0,0,.35), 0 24px 48px rgba(0,0,0,.5);
+    --ring: 0 0 0 4px rgba(56,189,248,.18);
+  }
+
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+    transition: background-color .4s ease, color .4s ease;
+  }
+  h1,h2,h3,h4,h5 { font-family: 'Plus Jakarta Sans', 'Inter', sans-serif; line-height: 1.2; margin: 0; font-weight: 700; }
+  a { color: inherit; text-decoration: none; }
+  button { font-family: inherit; cursor: pointer; border: none; background: none; color: inherit; }
+  ::selection { background: rgba(14,165,233,.25); }
+
+  /* ===== Layout ===== */
+  .wrap { min-height: 100vh; }
+
+  /* ===== Navbar ===== */
+  .nav {
+    position: sticky; top: 0; z-index: 100;
+    height: var(--nav-h);
+    display: flex; align-items: center;
+    padding: 0 clamp(16px, 4vw, 40px);
+    background: color-mix(in srgb, var(--surface) 80%, transparent);
+    backdrop-filter: saturate(180%) blur(14px);
+    -webkit-backdrop-filter: saturate(180%) blur(14px);
+    border-bottom: 1px solid var(--border);
+    transition: background .4s ease, border-color .4s ease;
+  }
+  .nav-inner { width: 100%; max-width: 1440px; margin: 0 auto; display: flex; align-items: center; gap: 20px; }
+  .brand { display: flex; align-items: center; gap: 12px; }
+  .brand-mark {
+    width: 42px; height: 42px; border-radius: 12px;
+    background: linear-gradient(135deg, var(--primary), var(--accent));
+    display: grid; place-items: center; color: #fff; flex-shrink: 0;
+    box-shadow: 0 6px 16px rgba(14,165,233,.35);
+  }
+  .brand-mark svg { width: 24px; height: 24px; }
+  .brand-text { display: flex; flex-direction: column; line-height: 1.1; }
+  .brand-text b { font-family: 'Plus Jakarta Sans'; font-weight: 800; font-size: 15px; letter-spacing: .2px; }
+  .brand-text span { font-size: 11.5px; color: var(--text-soft); font-weight: 500; }
+  .nav-links { display: flex; align-items: center; gap: 4px; margin-left: auto; }
+  .nav-link {
+    display: inline-flex; align-items: center; gap: 8px;
+    padding: 9px 14px; border-radius: 10px;
+    font-size: 14px; font-weight: 600; color: var(--text-soft);
+    transition: color .2s ease, background .2s ease, transform .15s ease;
+  }
+  .nav-link:hover { color: var(--text); background: var(--surface-2); }
+  .nav-link.active { color: var(--primary-700); background: color-mix(in srgb, var(--primary) 12%, transparent); }
+  [data-theme="dark"] .nav-link.active { color: var(--primary); }
+  .nav-link svg { width: 17px; height: 17px; }
+  .nav-actions { display: flex; align-items: center; gap: 10px; }
+  .icon-btn {
+    width: 40px; height: 40px; border-radius: 11px; display: grid; place-items: center;
+    background: var(--surface-2); border: 1px solid var(--border); color: var(--text-soft);
+    transition: color .2s, background .2s, transform .2s, border-color .2s;
+  }
+  .icon-btn:hover { color: var(--primary); border-color: var(--primary); transform: translateY(-1px); }
+  .icon-btn svg { width: 19px; height: 19px; }
+  .avatar {
+    width: 40px; height: 40px; border-radius: 50%;
+    background: linear-gradient(135deg, #0EA5E9, #06B6D4);
+    color: #fff; display: grid; place-items: center; font-weight: 700; font-size: 14px;
+    box-shadow: 0 4px 12px rgba(14,165,233,.3);
+    position: relative;
+  }
+  .avatar::after {
+    content: ""; position: absolute; right: 1px; bottom: 1px;
+    width: 10px; height: 10px; border-radius: 50%; background: var(--safe);
+    border: 2px solid var(--surface);
+  }
+  .menu-toggle { display: none; }
+
+  /* ===== Hero ===== */
+  .hero {
+    max-width: 1440px; margin: 0 auto;
+    padding: clamp(28px, 5vw, 48px) clamp(16px, 4vw, 40px) 8px;
+  }
+  .hero-top { display: flex; align-items: flex-end; justify-content: space-between; gap: 24px; flex-wrap: wrap; }
+  .eyebrow {
+    display: inline-flex; align-items: center; gap: 8px;
+    padding: 6px 12px; border-radius: 999px; font-size: 12.5px; font-weight: 600;
+    background: color-mix(in srgb, var(--primary) 12%, transparent);
+    color: var(--primary-700);
+    border: 1px solid color-mix(in srgb, var(--primary) 25%, transparent);
+  }
+  [data-theme="dark"] .eyebrow { color: var(--primary); }
+  .eyebrow .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--safe); box-shadow: 0 0 0 4px color-mix(in srgb, var(--safe) 30%, transparent); animation: pulse 2s infinite; }
+  .hero h1 { font-size: clamp(26px, 4vw, 40px); font-weight: 800; margin-top: 14px; letter-spacing: -.02em; }
+  .hero h1 .grad { background: linear-gradient(120deg, var(--primary-700), var(--accent)); -webkit-background-clip: text; background-clip: text; color: transparent; }
+  .hero p.lead { color: var(--text-soft); font-size: 16px; max-width: 620px; margin-top: 10px; }
+  .hero-actions { display: flex; gap: 10px; flex-wrap: wrap; }
+  .btn {
+    display: inline-flex; align-items: center; gap: 8px;
+    padding: 11px 18px; border-radius: 12px; font-size: 14px; font-weight: 600;
+    transition: transform .15s ease, box-shadow .2s ease, background .2s ease, color .2s ease, border-color .2s;
+  }
+  .btn svg { width: 17px; height: 17px; }
+  .btn-primary { background: linear-gradient(135deg, var(--primary), var(--primary-600)); color: #fff; box-shadow: 0 8px 20px rgba(14,165,233,.35); }
+  .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 12px 28px rgba(14,165,233,.45); }
+  .btn-ghost { background: var(--surface); border: 1px solid var(--border); color: var(--text); box-shadow: var(--shadow); }
+  .btn-ghost:hover { transform: translateY(-2px); border-color: var(--primary); color: var(--primary-700); }
+  [data-theme="dark"] .btn-ghost:hover { color: var(--primary); }
+
+  /* ===== Stats ===== */
+  .stats {
+    max-width: 1440px; margin: 24px auto 0;
+    padding: 0 clamp(16px, 4vw, 40px);
+    display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px;
+  }
+  .stat {
+    background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+    padding: 20px; box-shadow: var(--shadow); position: relative; overflow: hidden;
+    transition: transform .25s ease, box-shadow .25s ease, border-color .25s;
+  }
+  .stat:hover { transform: translateY(-4px); box-shadow: var(--shadow-lg); border-color: color-mix(in srgb, var(--primary) 35%, var(--border)); }
+  .stat::before { content:""; position:absolute; inset:0 auto 0 0; width:4px; background: var(--c, var(--primary)); opacity:.9; }
+  .stat-head { display: flex; align-items: center; justify-content: space-between; }
+  .stat-ic { width: 42px; height: 42px; border-radius: 12px; display: grid; place-items: center; background: var(--soft, color-mix(in srgb, var(--primary) 14%, transparent)); color: var(--c, var(--primary)); }
+  .stat-ic svg { width: 21px; height: 21px; }
+  .stat-trend { font-size: 12px; font-weight: 700; padding: 3px 8px; border-radius: 999px; }
+  .trend-up { color: var(--safe); background: var(--safe-soft); }
+  .trend-down { color: var(--unsafe); background: var(--unsafe-soft); }
+  .stat-val { font-family: 'Plus Jakarta Sans'; font-size: 30px; font-weight: 800; margin-top: 14px; letter-spacing: -.02em; }
+  .stat-label { color: var(--text-soft); font-size: 13px; font-weight: 500; margin-top: 2px; }
+
+  /* ===== Main grid ===== */
+  .main {
+    max-width: 1440px; margin: 24px auto;
+    padding: 0 clamp(16px, 4vw, 40px);
+    display: grid; grid-template-columns: 1fr 360px; gap: 20px;
+  }
+  .panel {
+    background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+    box-shadow: var(--shadow); overflow: hidden;
+  }
+  .panel-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 18px 20px; border-bottom: 1px solid var(--border); flex-wrap: wrap; }
+  .panel-title { display: flex; align-items: center; gap: 10px; font-size: 15.5px; font-weight: 700; }
+  .panel-title .ic { width: 30px; height: 30px; border-radius: 9px; display: grid; place-items: center; background: color-mix(in srgb, var(--primary) 12%, transparent); color: var(--primary-700); }
+  [data-theme="dark"] .panel-title .ic { color: var(--primary); }
+  .panel-title .ic svg { width: 17px; height: 17px; }
+  .panel-sub { font-size: 12.5px; color: var(--muted); font-weight: 500; }
+
+  /* Map */
+  .map-wrap { position: relative; }
+  #map { height: 520px; width: 100%; background: var(--surface-2); }
+  .map-overlay-top {
+    position: absolute; top: 14px; left: 14px; z-index: 500;
+    display: flex; gap: 8px; align-items: center; flex-wrap: wrap;
+  }
+  .chip {
+    display: inline-flex; align-items: center; gap: 7px;
+    padding: 7px 12px; border-radius: 999px; font-size: 12.5px; font-weight: 600;
+    background: color-mix(in srgb, var(--surface) 92%, transparent);
+    backdrop-filter: blur(8px); border: 1px solid var(--border); box-shadow: var(--shadow);
+  }
+  .chip .d { width: 8px; height: 8px; border-radius: 50%; }
+  .legend {
+    position: absolute; bottom: 14px; left: 14px; z-index: 500;
+    background: color-mix(in srgb, var(--surface) 92%, transparent); backdrop-filter: blur(8px);
+    border: 1px solid var(--border); border-radius: 12px; padding: 10px 14px; box-shadow: var(--shadow);
+    display: flex; gap: 16px; font-size: 12.5px; font-weight: 600;
+  }
+  .legend span { display: inline-flex; align-items: center; gap: 7px; }
+  .legend i { width: 11px; height: 11px; border-radius: 50%; display: inline-block; }
+  .leaflet-popup-content-wrapper { border-radius: 12px; box-shadow: var(--shadow-lg); }
+  .leaflet-popup-content { margin: 12px 14px; font-family: 'Inter', sans-serif; }
+  .leaflet-popup-content .ptitle { font-weight: 700; font-size: 13.5px; margin-bottom: 4px; }
+  .leaflet-popup-content .pmeta { font-size: 12px; color: var(--text-soft); }
+  .leaflet-popup-content .pstat { margin-top: 8px; display: inline-block; padding: 3px 9px; border-radius: 999px; font-size: 11.5px; font-weight: 700; }
+
+  /* Sidebar */
+  .side { display: flex; flex-direction: column; gap: 20px; }
+  .dist-card .panel-body { padding: 20px; }
+  .donut-wrap { display: flex; align-items: center; gap: 18px; }
+  #donut { min-width: 140px; }
+  .dist-legend { display: flex; flex-direction: column; gap: 12px; flex: 1; }
+  .dist-row { display: flex; align-items: center; gap: 10px; }
+  .dist-row .d { width: 10px; height: 10px; border-radius: 3px; flex-shrink: 0; }
+  .dist-row .lab { font-size: 13px; font-weight: 600; }
+  .dist-row .val { margin-left: auto; font-family: 'Plus Jakarta Sans'; font-weight: 700; font-size: 14px; }
+  .dist-row .pct { font-size: 11.5px; color: var(--muted); font-weight: 600; }
+
+  .region-card .panel-body { padding: 8px 8px 16px; }
+  #regionChart { width: 100%; }
+
+  .cities-card .panel-body { padding: 6px; }
+  .city-row {
+    display: flex; align-items: center; gap: 12px; padding: 10px 12px; border-radius: 10px;
+    transition: background .2s ease;
+  }
+  .city-row:hover { background: var(--surface-2); }
+  .city-rank { width: 26px; height: 26px; border-radius: 8px; display: grid; place-items: center; font-size: 12px; font-weight: 700; background: var(--surface-2); color: var(--text-soft); flex-shrink: 0; }
+  .city-row:nth-child(1) .city-rank { background: var(--unsafe-soft); color: var(--unsafe); }
+  .city-name { font-size: 13.5px; font-weight: 600; }
+  .city-meta { font-size: 11.5px; color: var(--muted); }
+  .city-bar { margin-left: auto; width: 70px; height: 6px; border-radius: 999px; background: var(--surface-2); overflow: hidden; }
+  .city-bar i { display: block; height: 100%; border-radius: 999px; background: linear-gradient(90deg, var(--warn), var(--unsafe)); transform-origin: left; animation: grow 1.2s cubic-bezier(.2,.8,.2,1) both; }
+
+  /* ===== Table ===== */
+  .table-wrap { max-width: 1440px; margin: 0 auto 48px; padding: 0 clamp(16px, 4vw, 40px); }
+  .table-scroll { overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; min-width: 720px; }
+  thead th {
+    text-align: left; font-size: 11.5px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase;
+    color: var(--muted); padding: 14px 16px; border-bottom: 1px solid var(--border); white-space: nowrap;
+  }
+  tbody td { padding: 14px 16px; border-bottom: 1px solid var(--border); font-size: 13.5px; }
+  tbody tr { transition: background .2s ease; }
+  tbody tr:hover { background: var(--surface-2); }
+  tbody tr:last-child td { border-bottom: none; }
+  .badge { display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; border-radius: 999px; font-size: 12px; font-weight: 700; }
+  .badge .d { width: 6px; height: 6px; border-radius: 50%; }
+  .b-safe { background: var(--safe-soft); color: var(--safe); }
+  .b-unsafe { background: var(--unsafe-soft); color: var(--unsafe); }
+  .b-warn { background: var(--warn-soft); color: #B45309; }
+  [data-theme="dark"] .b-warn { color: var(--warn); }
+  .pill { display: inline-block; padding: 3px 9px; border-radius: 7px; font-size: 11.5px; font-weight: 600; background: var(--surface-2); color: var(--text-soft); }
+  .src-ic { display: inline-flex; align-items: center; gap: 7px; font-weight: 600; }
+  .src-ic svg { width: 15px; height: 15px; color: var(--primary); }
+
+  /* ===== Offcanvas ===== */
+  .scrim { position: fixed; inset: 0; background: rgba(2,6,23,.45); backdrop-filter: blur(2px); opacity: 0; visibility: hidden; transition: opacity .3s ease, visibility .3s; z-index: 200; }
+  .scrim.open { opacity: 1; visibility: visible; }
+  .offcanvas {
+    position: fixed; top: 0; right: 0; height: 100%; width: 380px; max-width: 92vw; z-index: 210;
+    background: var(--surface); border-left: 1px solid var(--border); box-shadow: var(--shadow-lg);
+    transform: translateX(100%); transition: transform .35s cubic-bezier(.2,.8,.2,1);
+    display: flex; flex-direction: column;
+  }
+  .offcanvas.open { transform: translateX(0); }
+  .off-head { display: flex; align-items: center; justify-content: space-between; padding: 18px 20px; border-bottom: 1px solid var(--border); }
+  .off-head h3 { font-size: 16px; }
+  .off-body { padding: 18px 20px; overflow-y: auto; flex: 1; }
+  .field { margin-bottom: 18px; }
+  .field label { display: block; font-size: 12.5px; font-weight: 700; margin-bottom: 8px; color: var(--text-soft); }
+  .field label .ic { width: 15px; height: 15px; vertical-align: -3px; margin-right: 5px; color: var(--primary); }
+  select, .inp {
+    width: 100%; padding: 11px 12px; border-radius: 11px; border: 1px solid var(--border);
+    background: var(--bg-soft); color: var(--text); font-size: 14px; font-family: inherit;
+    transition: border-color .2s, box-shadow .2s; appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%2394A3B8' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+    background-repeat: no-repeat; background-position: right 12px center; padding-right: 38px;
+  }
+  select:focus, .inp:focus { outline: none; border-color: var(--primary); box-shadow: var(--ring); }
+  .seg { display: grid; grid-template-columns: repeat(3,1fr); gap: 8px; }
+  .seg label {
+    display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 12px 8px; border-radius: 12px;
+    border: 1.5px solid var(--border); cursor: pointer; font-size: 12.5px; font-weight: 600; transition: all .2s ease; margin: 0;
+  }
+  .seg input { display: none; }
+  .seg label .si { width: 22px; height: 22px; border-radius: 50%; display: grid; place-items: center; }
+  .seg label:hover { border-color: var(--primary); }
+  .seg input:checked + .si-all { background: var(--surface-2); }
+  .seg input:checked ~ .stxt { color: var(--primary-700); }
+  [data-theme="dark"] .seg input:checked ~ .stxt { color: var(--primary); }
+  .seg .s-all { border-color: var(--border); }
+  .seg .s-safe input:checked + .si { background: var(--safe-soft); }
+  .seg .s-safe input:checked + .si svg { color: var(--safe); }
+  .seg .s-unsafe input:checked + .si svg { color: var(--unsafe); }
+  .seg .si svg { width: 14px; height: 14px; color: var(--muted); }
+  .seg input:checked ~ * { }
+  .seg .s-safe:has(input:checked) { border-color: var(--safe); background: var(--safe-soft); }
+  .seg .s-unsafe:has(input:checked) { border-color: var(--unsafe); background: var(--unsafe-soft); }
+  .seg .s-all:has(input:checked) { border-color: var(--primary); background: color-mix(in srgb, var(--primary) 10%, transparent); }
+  .off-foot { padding: 16px 20px; border-top: 1px solid var(--border); display: flex; gap: 10px; }
+  .off-foot .btn { flex: 1; justify-content: center; }
+  .btn-outline { background: var(--surface-2); border: 1px solid var(--border); color: var(--text-soft); }
+  .btn-outline:hover { color: var(--text); border-color: var(--text-soft); }
+
+  /* ===== Modal ===== */
+  .modal-scrim { position: fixed; inset: 0; background: rgba(2,6,23,.5); backdrop-filter: blur(4px); display: none; align-items: center; justify-content: center; z-index: 300; padding: 20px; }
+  .modal-scrim.open { display: flex; animation: fadeIn .25s ease; }
+  .modal {
+    background: var(--surface); border: 1px solid var(--border); border-radius: 20px; box-shadow: var(--shadow-lg);
+    width: 100%; max-width: 560px; max-height: 92vh; overflow-y: auto;
+    animation: popIn .35s cubic-bezier(.2,.9,.3,1.2);
+  }
+  .modal-head { display: flex; align-items: center; justify-content: space-between; padding: 22px 24px 0; }
+  .modal-head h3 { font-size: 19px; }
+  .modal-ic { width: 44px; height: 44px; border-radius: 12px; background: linear-gradient(135deg, var(--primary), var(--accent)); display: grid; place-items: center; color: #fff; margin-right: 14px; }
+  .modal-ic svg { width: 22px; height: 22px; }
+  .modal-head-left { display: flex; align-items: center; }
+  .modal-body { padding: 18px 24px 24px; }
+  .modal-body p.muted { color: var(--text-soft); font-size: 14px; margin: 0 0 18px; }
+  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  .rate-group { display: flex; gap: 6px; flex-wrap: wrap; }
+  .rate { width: 38px; height: 38px; border-radius: 10px; border: 1.5px solid var(--border); display: grid; place-items: center; cursor: pointer; transition: all .2s; background: var(--bg-soft); }
+  .rate svg { width: 18px; height: 18px; color: var(--muted); transition: color .2s; }
+  .rate:hover, .rate.active { border-color: var(--warn); background: var(--warn-soft); }
+  .rate.active svg { color: var(--warn); }
+  .rate.active svg path { fill: var(--warn); }
+  textarea { width: 100%; padding: 12px; border-radius: 12px; border: 1px solid var(--border); background: var(--bg-soft); color: var(--text); font-family: inherit; font-size: 14px; resize: vertical; min-height: 90px; }
+  textarea:focus { outline: none; border-color: var(--primary); box-shadow: var(--ring); }
+  .modal-foot { display: flex; gap: 10px; justify-content: flex-end; padding: 0 24px 24px; }
+
+  /* ===== Footer ===== */
+  footer { border-top: 1px solid var(--border); background: var(--surface); margin-top: 24px; }
+  .foot-inner { max-width: 1440px; margin: 0 auto; padding: 28px clamp(16px,4vw,40px); display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; color: var(--text-soft); font-size: 13px; }
+  .foot-links { display: flex; gap: 20px; }
+  .foot-links a:hover { color: var(--primary); }
+
+  /* ===== Animations ===== */
+  @keyframes pulse { 0%,100% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--safe) 50%, transparent); } 50% { box-shadow: 0 0 0 6px transparent; } }
+  @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+  @keyframes popIn { from { opacity: 0; transform: translateY(20px) scale(.96); } to { opacity: 1; transform: translateY(0) scale(1); } }
+  @keyframes grow { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+  @keyframes rise { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: translateY(0); } }
+  .rise { animation: rise .6s cubic-bezier(.2,.8,.2,1) both; }
+  .d1 { animation-delay: .05s; } .d2 { animation-delay: .12s; } .d3 { animation-delay: .19s; } .d4 { animation-delay: .26s; }
+  .d5 { animation-delay: .33s; } .d6 { animation-delay: .4s; }
+
+  /* ===== Responsive ===== */
+  @media (max-width: 1100px) {
+    .main { grid-template-columns: 1fr; }
+    .side { grid-template-columns: 1fr 1fr; display: grid; }
+  }
+  @media (max-width: 860px) {
+    .stats { grid-template-columns: repeat(2, 1fr); }
+    .nav-link span { display: none; }
+    .nav-link { padding: 9px 11px; }
+    .brand-text span { display: none; }
+  }
+  @media (max-width: 620px) {
+    .stats { grid-template-columns: 1fr 1fr; }
+    .side { grid-template-columns: 1fr; }
+    .grid2 { grid-template-columns: 1fr; }
+    #map { height: 380px; }
+    .hero-actions { width: 100%; }
+  }
+  @media (max-width: 420px) {
+    .stats { grid-template-columns: 1fr; }
+  }
+</style>
+  <meta property="og:image" content="https://bolt.new/static/og_default.png">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:image" content="https://bolt.new/static/og_default.png">
+</head>
+<body>
+<div class="wrap">
+
+  <!-- ===== Navbar ===== -->
+  <nav class="nav">
+    <div class="nav-inner">
+      <div class="brand">
+        <div class="brand-mark">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2.5C8 7 5 10.5 5 14.5a7 7 0 0 0 14 0c0-4-3-7.5-7-12Z"/></svg>
+        </div>
+        <div class="brand-text">
+          <b>PCRWR</b>
+          <span>Water Quality Portal</span>
+        </div>
+      </div>
+
+      <div class="nav-links" id="navLinks">
+        <a class="nav-link active" data-view="map"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s-7-6.5-7-11a7 7 0 0 1 14 0c0 4.5-7 11-7 11Z"/><circle cx="12" cy="10" r="2.5"/></svg><span>Geographic Info</span></a>
+        <a class="nav-link" data-view="report"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 3v18"/></svg><span>Detail Report</span></a>
+        <a class="nav-link" data-view="stats"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><rect x="7" y="11" width="3" height="6"/><rect x="13" y="7" width="3" height="10"/></svg><span>Statistics</span></a>
+      </div>
+
+      <div class="nav-actions">
+        <button class="icon-btn" id="filterBtn" title="Filters" aria-label="Open filters">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 5h18M6 12h12M10 19h4"/></svg>
+        </button>
+        <button class="icon-btn" id="themeBtn" title="Toggle theme" aria-label="Toggle theme">
+          <svg id="themeIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4.5"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2M5 5l1.5 1.5M17.5 17.5L19 19M19 5l-1.5 1.5M6.5 17.5L5 19"/></svg>
+        </button>
+        <button class="btn btn-primary" id="feedbackBtn">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-9 8.5 8.5 8.5 0 0 1-3.8-.9L3 21l1.9-5.2A8.38 8.38 0 0 1 4 11.5 8.5 8.5 0 0 1 12.5 3 8.38 8.38 0 0 1 21 11.5Z"/></svg>
+          Feedback
+        </button>
+        <div class="avatar" title="John Doe · Admin">JD</div>
+      </div>
+    </div>
+  </nav>
+
+  <!-- ===== Hero ===== -->
+  <header class="hero">
+    <div class="hero-top">
+      <div class="rise">
+        <span class="eyebrow"><span class="dot"></span> Live monitoring · Updated just now</span>
+        <h1>National <span class="grad">Water Quality</span> Portal</h1>
+        <p class="lead">Real-time drinking-water safety across Pakistan. Explore monitoring stations, filter by region and parameter, and see which sources are safe for consumption.</p>
+      </div>
+      <div class="hero-actions rise d2">
+        <button class="btn btn-primary" id="heroFilter">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 5h18M6 12h12M10 19h4"/></svg>
+          Open Filters
+        </button>
+        <button class="btn btn-ghost" id="heroExport">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12m0 0 4-4m-4 4-4-4M5 21h14"/></svg>
+          Export Report
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- ===== Stats ===== -->
+  <section class="stats">
+    <div class="stat rise d1" style="--c:var(--primary); --soft:color-mix(in srgb, var(--primary) 14%, transparent);">
+      <div class="stat-head">
+        <div class="stat-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2.5C8 7 5 10.5 5 14.5a7 7 0 0 0 14 0c0-4-3-7.5-7-12Z"/></svg></div>
+        <span class="stat-trend trend-up">+12 this month</span>
+      </div>
+      <div class="stat-val" data-count="442">0</div>
+      <div class="stat-label">Total monitoring sources</div>
+    </div>
+    <div class="stat rise d2" style="--c:var(--safe); --soft:var(--safe-soft);">
+      <div class="stat-head">
+        <div class="stat-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></div>
+        <span class="stat-trend trend-up">36.2%</span>
+      </div>
+      <div class="stat-val" data-count="160">0</div>
+      <div class="stat-label">Sources marked safe</div>
+    </div>
+    <div class="stat rise d3" style="--c:var(--unsafe); --soft:var(--unsafe-soft);">
+      <div class="stat-head">
+        <div class="stat-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 9v4m0 4h.01M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z"/></svg></div>
+        <span class="stat-trend trend-down">63.8%</span>
+      </div>
+      <div class="stat-val" data-count="282">0</div>
+      <div class="stat-label">Sources unsafe for drinking</div>
+    </div>
+    <div class="stat rise d4" style="--c:var(--accent); --soft:color-mix(in srgb, var(--accent) 14%, transparent);">
+      <div class="stat-head">
+        <div class="stat-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 12-9 12s-9-5-9-12a9 9 0 0 1 18 0Z"/><circle cx="12" cy="10" r="3"/></svg></div>
+        <span class="stat-trend trend-up">7 regions</span>
+      </div>
+      <div class="stat-val" data-count="81">0</div>
+      <div class="stat-label">Cities covered nationwide</div>
+    </div>
+  </section>
+
+  <!-- ===== Main ===== -->
+  <main class="main">
+    <!-- Map panel -->
+    <section class="panel rise d3">
+      <div class="panel-head">
+        <div class="panel-title">
+          <span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 20 3 21V5l6-1M9 4l6 1M9 4v16M15 5l6-1v16l-6 1M15 5v16"/></svg></span>
+          <span>Interactive Monitoring Map</span>
+        </div>
+        <span class="panel-sub" id="mapCount">442 sources shown</span>
+      </div>
+      <div class="map-wrap">
+        <div id="map"></div>
+        <div class="map-overlay-top">
+          <span class="chip"><span class="d" style="background:var(--primary)"></span> <span id="chipSource">All sources</span></span>
+          <span class="chip"><span class="d" style="background:var(--accent)"></span> <span id="chipRegion">All regions</span></span>
+        </div>
+        <div class="legend">
+          <span><i style="background:var(--safe)"></i> Safe</span>
+          <span><i style="background:var(--warn)"></i> Marginal</span>
+          <span><i style="background:var(--unsafe)"></i> Unsafe</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- Sidebar -->
+    <aside class="side">
+      <div class="panel dist-card rise d4">
+        <div class="panel-head">
+          <div class="panel-title"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-9-9"/><path d="M21 12a9 9 0 0 0-9-9"/></svg></span> Drinking Safety</span>
+        </div>
+        <div class="panel-body">
+          <div class="donut-wrap">
+            <div id="donut"></div>
+            <div class="dist-legend">
+              <div class="dist-row"><span class="d" style="background:var(--safe)"></span><span class="lab">Safe</span><span class="val" id="legSafe">160</span><span class="pct" id="legSafePct">36.2%</span></div>
+              <div class="dist-row"><span class="d" style="background:var(--warn)"></span><span class="lab">Marginal</span><span class="val" id="legMarg">0</span><span class="pct" id="legMargPct">0%</span></div>
+              <div class="dist-row"><span class="d" style="background:var(--unsafe)"></span><span class="lab">Unsafe</span><span class="val" id="legUnsafe">282</span><span class="pct" id="legUnsafePct">63.8%</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="panel region-card rise d5">
+        <div class="panel-head">
+          <div class="panel-title"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><rect x="7" y="11" width="3" height="6"/><rect x="13" y="7" width="3" height="10"/></svg></span> Unsafe by Region</span>
+        </div>
+        <div class="panel-body"><div id="regionChart"></div></div>
+      </div>
+
+      <div class="panel cities-card rise d6">
+        <div class="panel-head">
+          <div class="panel-title"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s-7-6.5-7-11a7 7 0 0 1 14 0c0 4.5-7 11-7 11Z"/><circle cx="12" cy="10" r="2.5"/></svg></span> Most Affected Cities</div>
+        </div>
+        <div class="panel-body" id="cityList"></div>
+      </div>
+    </aside>
+  </main>
+
+  <!-- ===== Recent samples table ===== -->
+  <section class="table-wrap">
+    <div class="panel rise d4">
+      <div class="panel-head">
+        <div class="panel-title"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3h18v4H3zM3 10h18v4H3zM3 17h18v4H3z"/></svg></span> Recent Sample Readings</div>
+        <span class="panel-sub">Latest field measurements</span>
+      </div>
+      <div class="table-scroll">
+        <table>
+          <thead>
+            <tr><th>Location</th><th>Region</th><th>Source</th><th>pH</th><th>TDS</th><th>Turbidity</th><th>Status</th></tr>
+          </thead>
+          <tbody id="tableBody"></tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== Footer ===== -->
+  <footer>
+    <div class="foot-inner">
+      <div>© <span id="year"></span> PCRWR · National Water Quality Portal — Demo with sample data</div>
+      <div class="foot-links">
+        <a href="#">About</a><a href="#">Methodology</a><a href="#">Data Sources</a><a href="#">Contact</a>
+      </div>
+    </div>
+  </footer>
+</div>
+
+<!-- ===== Offcanvas ===== -->
+<div class="scrim" id="scrim"></div>
+<aside class="offcanvas" id="offcanvas" aria-hidden="true">
+  <div class="off-head">
+    <h3>Filters</h3>
+    <button class="icon-btn" id="offClose" aria-label="Close">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18M6 6l12 12"/></svg>
+    </button>
+  </div>
+  <div class="off-body">
+    <div class="field">
+      <label><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2.5C8 7 5 10.5 5 14.5a7 7 0 0 0 14 0c0-4-3-7.5-7-12Z"/></svg> Source Group</label>
+      <select id="fSource"><option value="">All sources</option><option value="Surface Water">Surface Water</option><option value="Ground Water">Ground Water</option><option value="Waste Water">Waste Water</option></select>
+    </div>
+    <div class="field">
+      <label><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 12-9 12s-9-5-9-12a9 9 0 0 1 18 0Z"/><circle cx="12" cy="10" r="3"/></svg> Region</label>
+      <select id="fRegion"><option value="">All regions</option><option>Punjab</option><option>Sindh</option><option>KP</option><option>Balochistan</option><option>AJ&amp;K</option><option>GB</option><option>ICT</option></select>
+    </div>
+    <div class="field">
+      <label><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21h18M5 21V8l7-5 7 5v13M9 21v-6h6v6"/></svg> City</label>
+      <select id="fCity"><option value="">All cities</option></select>
+    </div>
+    <div class="field">
+      <label><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><rect x="7" y="11" width="3" height="6"/><rect x="13" y="7" width="3" height="10"/></svg> Parameter</label>
+      <select id="fParam">
+        <option value="">All parameters</option>
+        <option>pH</option><option>TDS</option><option>Turbidity</option><option>Chloride</option><option>Arsenic</option><option>Nitrate</option><option>Fluoride</option><option>E. Coli</option>
+      </select>
+    </div>
+    <div class="field">
+      <label>Show results</label>
+      <div class="seg">
+        <label class="s-all"><input type="radio" name="status" value="all" checked><span class="si si-all"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/></svg></span><span class="stxt">All</span></label>
+        <label class="s-safe"><input type="radio" name="status" value="safe"><span class="si"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></span><span class="stxt">Safe</span></label>
+        <label class="s-unsafe"><input type="radio" name="status" value="unsafe"><span class="si"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18M6 6l12 12"/></svg></span><span class="stxt">Unsafe</span></label>
+      </div>
+    </div>
+  </div>
+  <div class="off-foot">
+    <button class="btn btn-outline" id="resetBtn">Reset</button>
+    <button class="btn btn-primary" id="applyBtn">Apply Filters</button>
+  </div>
+</aside>
+
+<!-- ===== Feedback Modal ===== -->
+<div class="modal-scrim" id="modalScrim">
+  <div class="modal" role="dialog" aria-modal="true">
+    <div class="modal-head">
+      <div class="modal-head-left">
+        <div class="modal-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-9 8.5 8.5 8.5 0 0 1-3.8-.9L3 21l1.9-5.2A8.38 8.38 0 0 1 4 11.5 8.5 8.5 0 0 1 12.5 3 8.38 8.38 0 0 1 21 11.5Z"/></svg></div>
+        <h3>Share your feedback</h3>
+      </div>
+      <button class="icon-btn" id="modalClose" aria-label="Close"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
+    </div>
+    <div class="modal-body">
+      <p class="muted">Help us improve the portal. It takes less than a minute.</p>
+      <div class="grid2">
+        <div class="field" style="margin:0">
+          <label>Full name</label>
+          <input class="inp" id="fbName" placeholder="Your full name">
+        </div>
+        <div class="field" style="margin:0">
+          <label>Email</label>
+          <input class="inp" id="fbEmail" type="email" placeholder="you@example.com">
+        </div>
+      </div>
+      <div class="field" style="margin-top:14px">
+        <label>How easy was it to find information?</label>
+        <div class="rate-group" id="rateGroup">
+          <div class="rate" data-v="1"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 11V21M3 11l9-8 9 8M3 11h18"/></svg></div>
+          <div class="rate" data-v="2"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 11V21M3 11l9-8 9 8M3 11h18"/></svg></div>
+          <div class="rate" data-v="3"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 11V21M3 11l9-8 9 8M3 11h18"/></svg></div>
+          <div class="rate" data-v="4"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 11V21M3 11l9-8 9 8M3 11h18"/></svg></div>
+          <div class="rate" data-v="5"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 11V21M3 11l9-8 9 8M3 11h18"/></svg></div>
+        </div>
+      </div>
+      <div class="field" style="margin:0">
+        <label>Additional comments (optional)</label>
+        <textarea id="fbMsg" placeholder="Tell us what we could do better..."></textarea>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-outline" id="modalCancel">Cancel</button>
+      <button class="btn btn-primary" id="modalSubmit">Submit feedback</button>
+    </div>
+  </div>
+</div>
+
+<script>
+/* =========================================================
+   Dummy data — water quality monitoring stations
+   ========================================================= */
+const STATIONS = [
+  {id:1, name:"GBPS Village Azim Shah", region:"Sindh", city:"Tando Allahyar", source:"Ground Water", lat:25.396, lng:68.790, status:"unsafe", ph:8.4, tds:1850, turb:4.2, param:"Arsenic"},
+  {id:2, name:"Jamiya Masjid, Haji Ghulam Shah", region:"Sindh", city:"Tando Allahyar", source:"Ground Water", lat:25.412, lng:68.409, status:"unsafe", ph:8.1, tds:1620, turb:3.8, param:"TDS"},
+  {id:3, name:"RO Plant Bucheri", region:"Sindh", city:"Hyderabad", source:"Surface Water", lat:25.341, lng:68.371, status:"safe", ph:7.2, tds:480, turb:1.1, param:"pH"},
+  {id:4, name:"Village Chakar Khan Shahani", region:"Sindh", city:"Hyderabad", source:"Ground Water", lat:25.240, lng:68.251, status:"marginal", ph:7.9, tds:980, turb:2.4, param:"Turbidity"},
+  {id:5, name:"WaterRHC Nasrpur", region:"Sindh", city:"Hyderabad", source:"Surface Water", lat:25.516, lng:68.622, status:"safe", ph:7.4, tds:520, turb:0.9, param:"pH"},
+  {id:6, name:"BHU Ditto Kalro", region:"Sindh", city:"Mirpur Khas", source:"Ground Water", lat:25.500, lng:68.754, status:"unsafe", ph:8.6, tds:2100, turb:5.1, param:"Arsenic"},
+  {id:7, name:"WSS Tando Allahyar City", region:"Sindh", city:"Tando Allahyar", source:"Ground Water", lat:25.466, lng:68.794, status:"marginal", ph:7.8, tds:1100, turb:2.9, param:"Nitrate"},
+  {id:8, name:"Civil Hospital Tando Allahyar", region:"Sindh", city:"Tando Allahyar", source:"Ground Water", lat:25.449, lng:68.712, status:"unsafe", ph:8.9, tds:2400, turb:6.3, param:"TDS"},
+  {id:9, name:"B.I.S.E Hyderabad", region:"Sindh", city:"Hyderabad", source:"Ground Water", lat:25.380, lng:68.348, status:"safe", ph:7.3, tds:610, turb:1.4, param:"pH"},
+  {id:10, name:"Tayyab Masjid Latifabad", region:"Sindh", city:"Hyderabad", source:"Ground Water", lat:25.408, lng:68.362, status:"unsafe", ph:8.2, tds:1750, turb:4.0, param:"Fluoride"},
+  {id:11, name:"KBCA Civic Centre Karachi", region:"Sindh", city:"Karachi", source:"Ground Water", lat:24.860, lng:67.001, status:"unsafe", ph:8.5, tds:1980, turb:4.7, param:"TDS"},
+  {id:12, name:"Markazi Jamia Masjid Jacob Line", region:"Sindh", city:"Karachi", source:"Ground Water", lat:24.873, lng:67.020, status:"marginal", ph:7.7, tds:1050, turb:2.6, param:"Turbidity"},
+  {id:13, name:"Ahmed General Hospital", region:"Sindh", city:"Karachi", source:"Surface Water", lat:24.867, lng:67.050, status:"safe", ph:7.1, tds:430, turb:0.8, param:"pH"},
+  {id:14, name:"Saeedabad Police Station", region:"Sindh", city:"Karachi", source:"Ground Water", lat:24.880, lng:66.990, status:"unsafe", ph:8.7, tds:2200, turb:5.5, param:"E. Coli"},
+  {id:15, name:"Masjid Aqsa Clifton", region:"Sindh", city:"Karachi", source:"Surface Water", lat:24.813, lng:67.030, status:"safe", ph:7.0, tds:390, turb:0.6, param:"pH"},
+  {id:16, name:"Virtual University Campus Badin", region:"Sindh", city:"Badin", source:"Ground Water", lat:24.672, lng:68.902, status:"unsafe", ph:8.3, tds:1680, turb:3.9, param:"Arsenic"},
+  {id:17, name:"Marvi Girls College Badin", region:"Sindh", city:"Badin", source:"Ground Water", lat:24.653, lng:68.838, status:"marginal", ph:7.9, tds:990, turb:2.5, param:"Nitrate"},
+  {id:18, name:"Hotel Sukkur Inn Clock Tower", region:"Sindh", city:"Sukkur", source:"Surface Water", lat:27.710, lng:68.851, status:"safe", ph:7.4, tds:540, turb:1.2, param:"pH"},
+  {id:19, name:"Noman Town Mirpur Khas", region:"Sindh", city:"Mirpur Khas", source:"Ground Water", lat:25.527, lng:69.005, status:"unsafe", ph:8.4, tds:1900, turb:4.4, param:"TDS"},
+  {id:20, name:"Jamia Masjid Haji Khan Laghari", region:"Sindh", city:"Mirpur Khas", source:"Ground Water", lat:25.485, lng:69.060, status:"marginal", ph:7.8, tds:1020, turb:2.7, param:"Fluoride"},
+
+  {id:21, name:"T.Well No.37 G-5 Islamabad", region:"ICT", city:"Islamabad", source:"Ground Water", lat:33.684, lng:73.048, status:"safe", ph:7.2, tds:450, turb:0.9, param:"pH"},
+  {id:22, name:"T.Well PIMS Near Storage", region:"ICT", city:"Islamabad", source:"Ground Water", lat:33.667, lng:73.064, status:"safe", ph:7.3, tds:480, turb:1.0, param:"pH"},
+  {id:23, name:"T.Well No.105 F-10/2", region:"ICT", city:"Islamabad", source:"Ground Water", lat:33.620, lng:72.996, status:"marginal", ph:7.8, tds:960, turb:2.3, param:"Turbidity"},
+  {id:24, name:"Quaid-e-Azam University", region:"ICT", city:"Islamabad", source:"Ground Water", lat:33.738, lng:73.084, status:"safe", ph:7.1, tds:420, turb:0.7, param:"pH"},
+  {id:25, name:"Simly Dam Noorpur Shahan", region:"ICT", city:"Islamabad", source:"Surface Water", lat:33.705, lng:73.115, status:"safe", ph:7.0, tds:380, turb:0.5, param:"pH"},
+
+  {id:26, name:"T.Well No.193 F-6 Islamabad", region:"ICT", city:"Islamabad", source:"Ground Water", lat:33.728, lng:73.054, status:"unsafe", ph:8.2, tds:1550, turb:3.7, param:"Arsenic"},
+  {id:27, name:"Bahauddin Zakariya University", region:"Punjab", city:"Multan", source:"Ground Water", lat:30.241, lng:71.518, status:"unsafe", ph:8.5, tds:2050, turb:4.9, param:"TDS"},
+  {id:28, name:"Nishter Hospital Multan", region:"Punjab", city:"Multan", source:"Ground Water", lat:30.197, lng:71.472, status:"marginal", ph:7.9, tds:1080, turb:2.8, param:"Nitrate"},
+  {id:29, name:"Shah Rukan Alam Colony", region:"Punjab", city:"Multan", source:"Ground Water", lat:30.223, lng:71.460, status:"unsafe", ph:8.6, tds:2300, turb:5.8, param:"Arsenic"},
+  {id:30, name:"WAPDA Colony Qasim Pur", region:"Punjab", city:"Multan", source:"Ground Water", lat:30.165, lng:71.438, status:"safe", ph:7.2, tds:510, turb:1.1, param:"pH"},
+  {id:31, name:"PCSIR Housing Society Lahore", region:"Punjab", city:"Lahore", source:"Ground Water", lat:31.483, lng:74.322, status:"unsafe", ph:8.3, tds:1720, turb:4.1, param:"Arsenic"},
+  {id:32, name:"Allama Iqbal Town Ravi Block", region:"Punjab", city:"Lahore", source:"Ground Water", lat:31.490, lng:74.268, status:"marginal", ph:7.8, tds:1010, turb:2.6, param:"Turbidity"},
+  {id:33, name:"Wahdat Colony Goal Bagh", region:"Punjab", city:"Lahore", source:"Ground Water", lat:31.470, lng:74.248, status:"unsafe", ph:8.4, tds:1880, turb:4.3, param:"TDS"},
+  {id:34, name:"Gulberg III Guromanget TW", region:"Punjab", city:"Lahore", source:"Ground Water", lat:31.520, lng:74.348, status:"safe", ph:7.3, tds:560, turb:1.2, param:"pH"},
+  {id:35, name:"Cantonment Board Chaklala Rawalpindi", region:"Punjab", city:"Rawalpindi", source:"Ground Water", lat:33.583, lng:73.098, status:"marginal", ph:7.7, tds:970, turb:2.4, param:"Nitrate"},
+  {id:36, name:"Bahria Town Phase II Rawalpindi", region:"Punjab", city:"Rawalpindi", source:"Ground Water", lat:33.612, lng:73.130, status:"safe", ph:7.1, tds:440, turb:0.8, param:"pH"},
+  {id:37, name:"T.Well 30 Muslim Town Faisalabad", region:"Punjab", city:"Faisalabad", source:"Ground Water", lat:31.428, lng:73.090, status:"unsafe", ph:8.5, tds:1950, turb:4.6, param:"TDS"},
+  {id:38, name:"Agriculture University Faisalabad", region:"Punjab", city:"Faisalabad", source:"Ground Water", lat:31.420, lng:73.070, status:"marginal", ph:7.8, tds:1040, turb:2.7, param:"Turbidity"},
+  {id:39, name:"Allied Hospital Punjab Medical College", region:"Punjab", city:"Faisalabad", source:"Ground Water", lat:31.438, lng:73.058, status:"safe", ph:7.2, tds:500, turb:1.0, param:"pH"},
+  {id:40, name:"B.I.S.E Bahawalpur WSS", region:"Punjab", city:"Bahawalpur", source:"Ground Water", lat:29.356, lng:71.690, status:"unsafe", ph:8.4, tds:1820, turb:4.2, param:"Fluoride"},
+  {id:41, name:"One Unit Colony Bahawalpur", region:"Punjab", city:"Bahawalpur", source:"Ground Water", lat:29.370, lng:71.712, status:"safe", ph:7.3, tds:530, turb:1.1, param:"pH"},
+  {id:42, name:"IBEX Mart Khushab Road Sargodha", region:"Punjab", city:"Sargodha", source:"Ground Water", lat:32.083, lng:72.660, status:"marginal", ph:7.9, tds:1060, turb:2.5, param:"Nitrate"},
+  {id:43, name:"Govt Central Model School Sargodha", region:"Punjab", city:"Sargodha", source:"Ground Water", lat:32.075, lng:72.648, status:"safe", ph:7.2, tds:490, turb:1.0, param:"pH"},
+
+  {id:44, name:"CMH Abbottabad", region:"KP", city:"Abbottabad", source:"Ground Water", lat:34.146, lng:73.210, status:"safe", ph:7.1, tds:430, turb:0.8, param:"pH"},
+  {id:45, name:"Kunj Ground G.D. College Abbottabad", region:"KP", city:"Abbottabad", source:"Surface Water", lat:34.168, lng:73.220, status:"safe", ph:7.0, tds:400, turb:0.6, param:"pH"},
+  {id:46, name:"TW DHDC Hospital Saidu Sharif", region:"KP", city:"Swat", source:"Ground Water", lat:34.742, lng:72.358, status:"marginal", ph:7.8, tds:990, turb:2.4, param:"Turbidity"},
+  {id:47, name:"Makand Bagh Gulshan Chowk Swat", region:"KP", city:"Swat", source:"Ground Water", lat:34.760, lng:72.366, status:"unsafe", ph:8.3, tds:1660, turb:3.9, param:"E. Coli"},
+  {id:48, name:"Baghdada TW-19 Mardan", region:"KP", city:"Mardan", source:"Ground Water", lat:34.198, lng:72.050, status:"unsafe", ph:8.4, tds:1790, turb:4.1, param:"TDS"},
+  {id:49, name:"University Town Peshawar", region:"KP", city:"Peshawar", source:"Ground Water", lat:34.008, lng:71.580, status:"marginal", ph:7.7, tds:980, turb:2.3, param:"Nitrate"},
+  {id:50, name:"Agriculture University Peshawar", region:"KP", city:"Peshawar", source:"Ground Water", lat:34.018, lng:71.560, status:"safe", ph:7.2, tds:470, turb:1.0, param:"pH"},
+
+  {id:51, name:"Civil Hospital Quetta", region:"Balochistan", city:"Quetta", source:"Ground Water", lat:30.179, lng:66.975, status:"unsafe", ph:8.5, tds:1920, turb:4.5, param:"TDS"},
+  {id:52, name:"Bolan Medical Complex Quetta", region:"Balochistan", city:"Quetta", source:"Ground Water", lat:30.198, lng:66.990, status:"marginal", ph:7.9, tds:1070, turb:2.6, param:"Fluoride"},
+  {id:53, name:"Satellite Town Block-5 Quetta", region:"Balochistan", city:"Quetta", source:"Ground Water", lat:30.165, lng:66.960, status:"safe", ph:7.3, tds:520, turb:1.1, param:"pH"},
+  {id:54, name:"Filtration Plant Khuzdar Cantt", region:"Balochistan", city:"Khuzdar", source:"Surface Water", lat:27.810, lng:66.601, status:"safe", ph:7.1, tds:440, turb:0.9, param:"pH"},
+  {id:55, name:"Engineering University Khuzdar", region:"Balochistan", city:"Khuzdar", source:"Ground Water", lat:27.808, lng:66.613, status:"unsafe", ph:8.4, tds:1700, turb:4.0, param:"Arsenic"},
+  {id:56, name:"Jamia Masjid Ziarat Town", region:"Balochistan", city:"Ziarat", source:"Surface Water", lat:30.397, lng:68.595, status:"safe", ph:7.0, tds:390, turb:0.6, param:"pH"},
+  {id:57, name:"P.H.E Tubewell Ziarat Town", region:"Balochistan", city:"Ziarat", source:"Ground Water", lat:30.393, lng:68.612, status:"marginal", ph:7.8, tds:1000, turb:2.5, param:"Turbidity"},
+
+  {id:58, name:"Assembly AJK Filtration Plant", region:"AJ&K", city:"Muzaffarabad", source:"Surface Water", lat:34.350, lng:73.470, status:"safe", ph:7.1, tds:420, turb:0.8, param:"pH"},
+  {id:59, name:"CHM Hospital Muzaffarabad", region:"AJ&K", city:"Muzaffarabad", source:"Ground Water", lat:34.365, lng:73.482, status:"marginal", ph:7.8, tds:970, turb:2.4, param:"Nitrate"},
+  {id:60, name:"Upper Chatter Water Supply", region:"AJ&K", city:"Muzaffarabad", source:"Surface Water", lat:34.380, lng:73.500, status:"safe", ph:7.0, tds:380, turb:0.5, param:"pH"},
+
+  {id:61, name:"New Polo Ground Gilgit", region:"GB", city:"Gilgit", source:"Surface Water", lat:35.922, lng:74.308, status:"safe", ph:7.0, tds:370, turb:0.5, param:"pH"},
+  {id:62, name:"Karakoram International University", region:"GB", city:"Gilgit", source:"Ground Water", lat:35.928, lng:74.322, status:"marginal", ph:7.7, tds:960, turb:2.3, param:"Turbidity"},
+  {id:63, name:"Hunza River Doynor Bridge", region:"GB", city:"Gilgit", source:"Surface Water", lat:35.912, lng:74.290, status:"safe", ph:7.1, tds:410, turb:0.7, param:"pH"},
+  {id:64, name:"Skardu River Hurnush", region:"GB", city:"Skardu", source:"Surface Water", lat:35.300, lng:75.620, status:"safe", ph:7.0, tds:360, turb:0.5, param:"pH"},
+  {id:65, name:"Water Tank Jutial Cantt Gilgit", region:"GB", city:"Gilgit", source:"Ground Water", lat:35.890, lng:74.300, status:"unsafe", ph:8.3, tds:1640, turb:3.8, param:"Arsenic"}
+];
+
+const STATUS_COLOR = { safe:"#10B981", marginal:"#F59E0B", unsafe:"#EF4444" };
+const STATUS_LABEL = { safe:"Safe", marginal:"Marginal", unsafe:"Unsafe" };
+const SOURCE_ICON = {
+  "Ground Water": '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2.5C8 7 5 10.5 5 14.5a7 7 0 0 0 14 0c0-4-3-7.5-7-12Z"/></svg>',
+  "Surface Water": '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12c2 0 2-2 4-2s2 2 4 2 2-2 4-2 2 2 4 2 2-2 4-2"/><path d="M2 17c2 0 2-2 4-2s2 2 4 2 2-2 4-2 2 2 4 2 2-2 4-2"/></svg>',
+  "Waste Water": '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 2v6a5 5 0 0 0 10 0V2M12 13v8M8 21h8"/></svg>'
+};
+
+/* =========================================================
+   Map
+   ========================================================= */
+let map, markerLayer;
+function initMap() {
+  map = L.map("map", { scrollWheelZoom: true, zoomControl: true }).setView([29.5, 70.5], 5);
+  L.tileLayer("https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png", {
+    attribution: '&copy; OpenStreetMap &copy; CARTO',
+    maxZoom: 19, subdomains: "abcd"
+  }).addTo(map);
+  markerLayer = L.layerGroup().addTo(map);
+  renderMarkers(STATIONS);
+}
+function renderMarkers(data) {
+  markerLayer.clearLayers();
+  data.forEach(s => {
+    const c = STATUS_COLOR[s.status];
+    const marker = L.circleMarker([s.lat, s.lng], {
+      radius: 8, fillColor: c, color: "#fff", weight: 2, fillOpacity: .9
+    });
+    marker.bindPopup(`
+      <div class="ptitle">${s.name}</div>
+      <div class="pmeta">${s.city} · ${s.region} · ${s.source}</div>
+      <div class="pmeta">pH ${s.ph} · TDS ${s.tds} mg/L · Turbidity ${s.turb} NTU</div>
+      <div class="pstat" style="background:${c}22;color:${c}">${STATUS_LABEL[s.status]}</div>
+    `, { maxWidth: 260 });
+    marker.on("mouseover", function () { this.openPopup(); });
+    marker.on("mouseout", function () { this.closePopup(); });
+    marker.addTo(markerLayer);
+  });
+  const bounds = data.map(s => [s.lat, s.lng]);
+  if (data.length) map.fitBounds(bounds, { padding: [40, 40], maxZoom: 9 });
+}
+
+/* =========================================================
+   Charts
+   ========================================================= */
+let donutChart, regionChart;
+function initDonut() {
+  const counts = countStatus(STATIONS);
+  donutChart = new ApexCharts(document.querySelector("#donut"), {
+    series: [counts.safe, counts.marginal, counts.unsafe],
+    chart: { type: "donut", width: 150, height: 150, sparkline: { enabled: true } },
+    stroke: { width: 0 },
+    colors: [STATUS_COLOR.safe, STATUS_COLOR.marginal, STATUS_COLOR.unsafe],
+    plotOptions: { pie: { donut: { size: "72%", labels: { show: true, total: { show: true, label: "Sources", fontSize: "12px", color: getCSS("--muted"), formatter: () => STATIONS.length } } } } },
+    labels: ["Safe", "Marginal", "Unsafe"],
+    dataLabels: { enabled: false },
+    legend: { show: false },
+    tooltip: { theme: getThemeName() }
+  });
+  donutChart.render();
+}
+function initRegionChart() {
+  const regions = ["Punjab","Sindh","KP","Balochistan","ICT","AJ&K","GB"];
+  const unsafeByRegion = regions.map(r => STATIONS.filter(s => s.region === r && s.status === "unsafe").length);
+  regionChart = new ApexCharts(document.querySelector("#regionChart"), {
+    series: [{ name: "Unsafe sources", data: unsafeByRegion }],
+    chart: { type: "bar", height: 220, toolbar: { show: false }, sparkline: { enabled: false }, fontFamily: "Inter, sans-serif" },
+    plotOptions: { bar: { borderRadius: 6, columnWidth: "55%", distributed: true } },
+    colors: ["#EF4444"],
+    dataLabels: { enabled: false },
+    xaxis: { categories: regions, labels: { style: { colors: getCSS("--text-soft"), fontSize: "11px" } } },
+    yaxis: { labels: { style: { colors: getCSS("--muted") } } },
+    grid: { borderColor: getCSS("--border"), strokeDashArray: 3 },
+    tooltip: { theme: getThemeName() }
+  });
+  regionChart.render();
+}
+
+/* =========================================================
+   City list (most affected)
+   ========================================================= */
+function renderCityList(data) {
+  const byCity = {};
+  data.forEach(s => {
+    if (!byCity[s.city]) byCity[s.city] = { unsafe: 0, total: 0, region: s.region };
+    byCity[s.city].total++;
+    if (s.status === "unsafe") byCity[s.city].unsafe++;
+  });
+  const rows = Object.entries(byCity)
+    .map(([city, v]) => ({ city, ...v, ratio: v.unsafe / v.total }))
+    .sort((a, b) => b.ratio - a.ratio || b.unsafe - a.unsafe)
+    .slice(0, 6);
+  const max = Math.max(...rows.map(r => r.ratio), 0.01);
+  const html = rows.map((r, i) => `
+    <div class="city-row">
+      <span class="city-rank">${i + 1}</span>
+      <div>
+        <div class="city-name">${r.city}</div>
+        <div class="city-meta">${r.region} · ${r.unsafe}/${r.total} unsafe</div>
+      </div>
+      <span class="city-bar"><i style="transform:scaleX(${(r.ratio / max).toFixed(2)})"></i></span>
+    </div>`).join("");
+  document.querySelector("#cityList").innerHTML = html;
+}
+
+/* =========================================================
+   Table
+   ========================================================= */
+function renderTable(data) {
+  const rows = data.slice(0, 12).map(s => {
+    const cls = s.status === "safe" ? "b-safe" : s.status === "marginal" ? "b-warn" : "b-unsafe";
+    return `<tr>
+      <td><b style="font-weight:600">${s.name}</b></td>
+      <td>${s.region}</td>
+      <td><span class="src-ic">${SOURCE_ICON[s.source]} ${s.source}</span></td>
+      <td><span class="pill">${s.ph}</span></td>
+      <td><span class="pill">${s.tds} mg/L</span></td>
+      <td><span class="pill">${s.turb} NTU</span></td>
+      <td><span class="badge ${cls}"><span class="d" style="background:${STATUS_COLOR[s.status]}"></span>${STATUS_LABEL[s.status]}</span></td>
+    </tr>`;
+  }).join("");
+  document.querySelector("#tableBody").innerHTML = rows;
+}
+
+/* =========================================================
+   Stats / counters
+   ========================================================= */
+function countStatus(data) {
+  return data.reduce((a, s) => { a[s.status]++; return a; }, { safe: 0, marginal: 0, unsafe: 0 });
+}
+function animateCount(el, target) {
+  const dur = 1200, start = performance.now();
+  function step(now) {
+    const p = Math.min((now - start) / dur, 1);
+    const eased = 1 - Math.pow(1 - p, 3);
+    el.textContent = Math.round(eased * target).toLocaleString();
+    if (p < 1) requestAnimationFrame(step);
+  }
+  requestAnimationFrame(step);
+}
+function updateStats(data) {
+  const counts = countStatus(data);
+  const total = data.length;
+  const safePct = total ? ((counts.safe / total) * 100).toFixed(1) : 0;
+  const unsafePct = total ? ((counts.unsafe / total) * 100).toFixed(1) : 0;
+  const margPct = total ? ((counts.marginal / total) * 100).toFixed(1) : 0;
+  document.querySelector("#mapCount").textContent = `${total} sources shown`;
+  document.querySelector("#legSafe").textContent = counts.safe;
+  document.querySelector("#legMarg").textContent = counts.marginal;
+  document.querySelector("#legUnsafe").textContent = counts.unsafe;
+  document.querySelector("#legSafePct").textContent = safePct + "%";
+  document.querySelector("#legMargPct").textContent = margPct + "%";
+  document.querySelector("#legUnsafePct").textContent = unsafePct + "%";
+  if (donutChart) donutChart.updateSeries([counts.safe, counts.marginal, counts.unsafe]);
+}
+
+/* =========================================================
+   Filters
+   ========================================================= */
+function populateCities() {
+  const cities = [...new Set(STATIONS.map(s => s.city))].sort();
+  document.querySelector("#fCity").innerHTML = '<option value="">All cities</option>' +
+    cities.map(c => `<option>${c}</option>`).join("");
+}
+function applyFilters() {
+  const src = document.querySelector("#fSource").value;
+  const reg = document.querySelector("#fRegion").value;
+  const city = document.querySelector("#fCity").value;
+  const param = document.querySelector("#fParam").value;
+  const status = document.querySelector('input[name="status"]:checked').value;
+  const filtered = STATIONS.filter(s =>
+    (!src || s.source === src) &&
+    (!reg || s.region === reg) &&
+    (!city || s.city === city) &&
+    (!param || s.param === param) &&
+    (status === "all" || s.status === status)
+  );
+  renderMarkers(filtered);
+  renderTable(filtered);
+  renderCityList(filtered);
+  updateStats(filtered);
+  document.querySelector("#chipSource").textContent = src || "All sources";
+  document.querySelector("#chipRegion").textContent = reg || "All regions";
+  closeOffcanvas();
+}
+function resetFilters() {
+  document.querySelector("#fSource").value = "";
+  document.querySelector("#fRegion").value = "";
+  document.querySelector("#fCity").value = "";
+  document.querySelector("#fParam").value = "";
+  document.querySelector('input[name="status"][value="all"]').checked = true;
+  applyFilters();
+}
+
+/* =========================================================
+   Offcanvas + Modal
+   ========================================================= */
+function openOffcanvas() { document.querySelector("#offcanvas").classList.add("open"); document.querySelector("#scrim").classList.add("open"); }
+function closeOffcanvas() { document.querySelector("#offcanvas").classList.remove("open"); document.querySelector("#scrim").classList.remove("open"); }
+function openModal() { document.querySelector("#modalScrim").classList.add("open"); }
+function closeModal() { document.querySelector("#modalScrim").classList.remove("open"); }
+
+/* =========================================================
+   Theme
+   ========================================================= */
+function getCSS(v) { return getComputedStyle(document.documentElement).getPropertyValue(v).trim(); }
+function getThemeName() { return document.documentElement.getAttribute("data-theme") === "dark" ? "dark" : "light"; }
+function toggleTheme() {
+  const next = getThemeName() === "dark" ? "light" : "dark";
+  document.documentElement.setAttribute("data-theme", next);
+  const icon = document.querySelector("#themeIcon");
+  icon.innerHTML = next === "dark"
+    ? '<path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8Z"/>'
+    : '<circle cx="12" cy="12" r="4.5"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2M5 5l1.5 1.5M17.5 17.5L19 19M19 5l-1.5 1.5M6.5 17.5L5 19"/>';
+  if (map) { map.remove(); initMap(); }
+  if (donutChart) { donutChart.destroy(); initDonut(); }
+  if (regionChart) { regionChart.destroy(); initRegionChart(); }
+}
+
+/* =========================================================
+   Helpers
+   ========================================================= */
+function toast(msg) {
+  const t = document.createElement("div");
+  t.textContent = msg;
+  t.style.cssText = "position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:var(--text);color:var(--bg);padding:12px 20px;border-radius:12px;font-size:14px;font-weight:600;box-shadow:var(--shadow-lg);z-index:400;animation:rise .4s ease";
+  document.body.appendChild(t);
+  setTimeout(() => { t.style.opacity = "0"; t.style.transition = "opacity .3s"; setTimeout(() => t.remove(), 300); }, 2600);
+}
+
+/* =========================================================
+   Init
+   ========================================================= */
+document.querySelector("#year").textContent = new Date().getFullYear();
+populateCities();
+initMap();
+initDonut();
+initRegionChart();
+renderTable(STATIONS);
+renderCityList(STATIONS);
+
+document.querySelectorAll("[data-count]").forEach(el => animateCount(el, +el.dataset.count));
+
+document.querySelector("#filterBtn").addEventListener("click", openOffcanvas);
+document.querySelector("#heroFilter").addEventListener("click", openOffcanvas);
+document.querySelector("#offClose").addEventListener("click", closeOffcanvas);
+document.querySelector("#scrim").addEventListener("click", closeOffcanvas);
+document.querySelector("#applyBtn").addEventListener("click", applyFilters);
+document.querySelector("#resetBtn").addEventListener("click", resetFilters);
+
+document.querySelector("#feedbackBtn").addEventListener("click", openModal);
+document.querySelector("#modalClose").addEventListener("click", closeModal);
+document.querySelector("#modalCancel").addEventListener("click", closeModal);
+document.querySelector("#modalScrim").addEventListener("click", e => { if (e.target.id === "modalScrim") closeModal(); });
+document.querySelector("#modalSubmit").addEventListener("click", () => {
+  const name = document.querySelector("#fbName").value.trim();
+  const email = document.querySelector("#fbEmail").value.trim();
+  if (!name || !email) { toast("Please add your name and email"); return; }
+  closeModal();
+  toast("Thanks! Your feedback has been recorded.");
+  document.querySelector("#fbName").value = "";
+  document.querySelector("#fbEmail").value = "";
+  document.querySelector("#fbMsg").value = "";
+  document.querySelectorAll(".rate").forEach(r => r.classList.remove("active"));
+});
+
+document.querySelectorAll(".rate").forEach(r => r.addEventListener("click", () => {
+  document.querySelectorAll(".rate").forEach(x => x.classList.remove("active"));
+  r.classList.add("active");
+}));
+
+document.querySelector("#themeBtn").addEventListener("click", toggleTheme);
+document.querySelector("#heroExport").addEventListener("click", () => toast("Report exported (demo)"));
+
+document.querySelectorAll(".nav-link").forEach(l => l.addEventListener("click", e => {
+  document.querySelectorAll(".nav-link").forEach(x => x.classList.remove("active"));
+  l.classList.add("active");
+  const v = l.dataset.view;
+  if (v === "report") document.querySelector(".table-wrap").scrollIntoView({ behavior: "smooth" });
+  else if (v === "stats") document.querySelector(".side").scrollIntoView({ behavior: "smooth" });
+  else document.querySelector(".hero").scrollIntoView({ behavior: "smooth" });
+}));
+
+document.addEventListener("keydown", e => { if (e.key === "Escape") { closeOffcanvas(); closeModal(); } });
+</script>
+</body>
+</html>
